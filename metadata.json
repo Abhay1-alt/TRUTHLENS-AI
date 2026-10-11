@@ -1,0 +1,6 @@
+{
+  "name": "TruthLens AI",
+  "description": "AI-Powered Multimodal Content Authenticity Analyzer for inspecting URLs and images for manipulation, synthetic generation, and source risk signals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,242 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 4.1: Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Reusable Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Zero-DB-read admin check for list queries (Pillar 8 Cost-Optimization Clause)
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'abhaymishrakarma686@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Blueprint: UserProfile (/users/{userId})
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: UserPrivateInfo (/users/{userId}/private/{docId})
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: Analysis (/analyses/{analysisId})
+    function isValidAnalysis(data) {
+      return data.keys().hasAll([
+          'userId', 'analysisType', 'inputReference', 'classification',
+          'confidence', 'riskScore', 'summary', 'isDemo',
+          'sourceScore', 'contentScore', 'metadataScore', 'visualScore', 'aiScore',
+          'signalsSummary', 'recommendations',
+          'evidenceSummary', 'metadataSummary',
+          'explanationWhat', 'explanationWhy', 'explanationVerify',
+          'status', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'analysisType', 'inputReference', 'classification',
+          'confidence', 'riskScore', 'summary', 'isDemo',
+          'sourceScore', 'contentScore', 'metadataScore', 'visualScore', 'aiScore',
+          'signalsSummary', 'recommendations',
+          'evidenceSummary', 'metadataSummary',
+          'explanationWhat', 'explanationWhy', 'explanationVerify',
+          'status', 'createdAt'
+        ]) &&
+        data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId == request.auth.uid &&
+        data.analysisType is string && data.analysisType.size() <= 16 && (data.analysisType == 'url' || data.analysisType == 'image') &&
+        data.inputReference is string && data.inputReference.size() >= 1 && data.inputReference.size() <= 1024 &&
+        data.classification is string && data.classification.size() <= 64 && (
+          data.classification == 'LIKELY_AUTHENTIC' ||
+          data.classification == 'SUSPICIOUS' ||
+          data.classification == 'LIKELY_MANIPULATED_OR_AI_GENERATED'
+        ) &&
+        (data.confidence is int || data.confidence is float) && data.confidence >= 0 && data.confidence <= 1 &&
+        data.riskScore is int && data.riskScore >= 0 && data.riskScore <= 100 &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 3000 &&
+        data.isDemo is bool &&
+        data.sourceScore is int && data.sourceScore >= 0 && data.sourceScore <= 100 &&
+        data.contentScore is int && data.contentScore >= 0 && data.contentScore <= 100 &&
+        data.metadataScore is int && data.metadataScore >= 0 && data.metadataScore <= 100 &&
+        data.visualScore is int && data.visualScore >= 0 && data.visualScore <= 100 &&
+        data.aiScore is int && data.aiScore >= 0 && data.aiScore <= 100 &&
+        data.signalsSummary is list && data.signalsSummary.size() <= 20 &&
+        (data.signalsSummary.size() == 0 || (data.signalsSummary[0] is string && data.signalsSummary[0].size() <= 500)) &&
+        data.recommendations is list && data.recommendations.size() <= 10 &&
+        (data.recommendations.size() == 0 || (data.recommendations[0] is string && data.recommendations[0].size() <= 500)) &&
+        data.evidenceSummary is string && data.evidenceSummary.size() >= 1 && data.evidenceSummary.size() <= 4000 &&
+        data.metadataSummary is string && data.metadataSummary.size() >= 1 && data.metadataSummary.size() <= 4000 &&
+        data.explanationWhat is string && data.explanationWhat.size() >= 1 && data.explanationWhat.size() <= 2000 &&
+        data.explanationWhy is string && data.explanationWhy.size() >= 1 && data.explanationWhy.size() <= 2000 &&
+        data.explanationVerify is string && data.explanationVerify.size() >= 1 && data.explanationVerify.size() <= 2000 &&
+        data.status is string && data.status.size() <= 20 && (data.status == 'completed' || data.status == 'archived') &&
+        data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: AnalysisSignal (/analyses/{analysisId}/signals/{signalId})
+    function isValidAnalysisSignal(data, analysisId) {
+      return data.keys().hasAll([
+          'analysisId', 'userId', 'category', 'severity',
+          'description', 'evidence', 'confidence', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'analysisId', 'userId', 'category', 'severity',
+          'description', 'evidence', 'confidence', 'createdAt'
+        ]) &&
+        data.analysisId is string && data.analysisId.size() >= 1 && data.analysisId.size() <= 128 && data.analysisId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.analysisId == analysisId &&
+        data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId == request.auth.uid &&
+        data.category is string && data.category.size() <= 20 && (
+          data.category == 'source' ||
+          data.category == 'content' ||
+          data.category == 'metadata' ||
+          data.category == 'visual' ||
+          data.category == 'ai'
+        ) &&
+        data.severity is string && data.severity.size() <= 16 && (
+          data.severity == 'low' ||
+          data.severity == 'medium' ||
+          data.severity == 'high'
+        ) &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 1000 &&
+        data.evidence is string && data.evidence.size() >= 1 && data.evidence.size() <= 1000 &&
+        (data.confidence is int || data.confidence is float) && data.confidence >= 0 && data.confidence <= 1 &&
+        data.createdAt is timestamp;
+    }
+
+    // Collection: /users/{userId}
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isVerifiedUser() && isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming()) && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(userId) && isValidUserProfile(incoming()) && (
+        isAdmin() || (
+          isOwner(userId) &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName'])
+        )
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Subcollection: /users/{userId}/private/{docId} (PII Isolation)
+      match /private/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/users/$(userId));
+        allow list: if false;
+        allow create: if isVerifiedUser() && isValidId(userId) && isValidId(docId) && docId == 'info' &&
+          isOwner(userId) && isValidUserPrivateInfo(incoming()) && incoming().createdAt == request.time &&
+          (exists(/databases/$(database)/documents/users/$(userId)) || existsAfter(/databases/$(database)/documents/users/$(userId)));
+        allow update: if isVerifiedUser() && isValidId(userId) && isValidId(docId) && docId == 'info' &&
+          isValidUserPrivateInfo(incoming()) && (
+            isAdmin() || (
+              isOwner(userId) &&
+              incoming().uid == existing().uid &&
+              incoming().createdAt == existing().createdAt &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['email']) &&
+              exists(/databases/$(database)/documents/users/$(userId))
+            )
+          );
+        allow delete: if isValidId(userId) && isValidId(docId) && isAdmin();
+      }
+    }
+
+    // Collection: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // Collection: /analyses/{analysisId}
+    match /analyses/{analysisId} {
+      allow get: if isValidId(analysisId) && (
+        (isSignedIn() && existing().userId == request.auth.uid) || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isBootstrappedAdmin()
+      );
+      allow create: if isVerifiedUser() && isValidId(analysisId) &&
+        isValidAnalysis(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(analysisId) &&
+        isValidAnalysis(incoming()) && (
+          isAdmin() || (
+            existing().userId == request.auth.uid &&
+            existing().status != 'archived' &&
+            incoming().userId == existing().userId &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+          )
+        );
+      allow delete: if isVerifiedUser() && isValidId(analysisId) && (
+        existing().userId == request.auth.uid || isAdmin()
+      );
+
+      // Subcollection: /analyses/{analysisId}/signals/{signalId} (Master Gate)
+      match /signals/{signalId} {
+        allow get: if isValidId(analysisId) && isValidId(signalId) && (
+          (isSignedIn() &&
+            existing().userId == request.auth.uid &&
+            get(/databases/$(database)/documents/analyses/$(analysisId)).data.userId == request.auth.uid
+          ) || isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          resource.data.userId == request.auth.uid || isBootstrappedAdmin()
+        );
+        allow create: if isVerifiedUser() && isValidId(analysisId) && isValidId(signalId) &&
+          isValidAnalysisSignal(incoming(), analysisId) &&
+          incoming().createdAt == request.time && (
+            (exists(/databases/$(database)/documents/analyses/$(analysisId)) &&
+              get(/databases/$(database)/documents/analyses/$(analysisId)).data.userId == request.auth.uid) ||
+            (existsAfter(/databases/$(database)/documents/analyses/$(analysisId)) &&
+              getAfter(/databases/$(database)/documents/analyses/$(analysisId)).data.userId == request.auth.uid)
+          );
+        allow update, delete: if false;
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  truthlens-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - AI_PROVIDER=${AI_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-gemini-3.8-flash}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - MAX_IMAGE_SIZE_MB=${MAX_IMAGE_SIZE_MB:-10}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: truthlens
+      POSTGRES_PASSWORD: truthlens_password
+      POSTGRES_DB: truthlens_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

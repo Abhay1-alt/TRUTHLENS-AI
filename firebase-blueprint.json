@@ -1,0 +1,301 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public user account metadata without PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was created."
+        }
+      },
+      "required": ["uid", "displayName", "createdAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII document for a user account.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Private email address of the user.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the private record was created."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator marker document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of admin grant."
+        }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "Analysis": {
+      "title": "Analysis",
+      "description": "A multimodal content authenticity analysis report for a URL or image.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the user who ran the analysis.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "analysisType": {
+          "type": "string",
+          "description": "Type of content analyzed.",
+          "enum": ["url", "image"]
+        },
+        "inputReference": {
+          "type": "string",
+          "description": "Normalized URL or uploaded image filename.",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "classification": {
+          "type": "string",
+          "description": "Primary probabilistic assessment category.",
+          "enum": ["LIKELY_AUTHENTIC", "SUSPICIOUS", "LIKELY_MANIPULATED_OR_AI_GENERATED"]
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence score between 0 and 1."
+        },
+        "riskScore": {
+          "type": "integer",
+          "description": "Composite risk score between 0 and 100."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Executive assessment summary.",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "isDemo": {
+          "type": "boolean",
+          "description": "Whether this analysis was generated in Demo Mode."
+        },
+        "sourceScore": {
+          "type": "integer",
+          "description": "Source risk component score (0-100)."
+        },
+        "contentScore": {
+          "type": "integer",
+          "description": "Content risk component score (0-100)."
+        },
+        "metadataScore": {
+          "type": "integer",
+          "description": "Metadata risk component score (0-100)."
+        },
+        "visualScore": {
+          "type": "integer",
+          "description": "Visual inspection component score (0-100)."
+        },
+        "aiScore": {
+          "type": "integer",
+          "description": "AI inference component score (0-100)."
+        },
+        "signalsSummary": {
+          "type": "array",
+          "description": "Bounded list of signal headlines for table views."
+        },
+        "recommendations": {
+          "type": "array",
+          "description": "Bounded list of verification recommendations."
+        },
+        "evidenceSummary": {
+          "type": "string",
+          "description": "Formatted evidence summary text.",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "metadataSummary": {
+          "type": "string",
+          "description": "Formatted technical metadata summary text.",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "explanationWhat": {
+          "type": "string",
+          "description": "What signals were detected.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "explanationWhy": {
+          "type": "string",
+          "description": "Why the detected signals matter.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "explanationVerify": {
+          "type": "string",
+          "description": "What the user should independently verify.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "description": "Terminal state of the analysis report.",
+          "enum": ["completed", "archived"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "analysisType",
+        "inputReference",
+        "classification",
+        "confidence",
+        "riskScore",
+        "summary",
+        "isDemo",
+        "sourceScore",
+        "contentScore",
+        "metadataScore",
+        "visualScore",
+        "aiScore",
+        "signalsSummary",
+        "recommendations",
+        "evidenceSummary",
+        "metadataSummary",
+        "explanationWhat",
+        "explanationWhy",
+        "explanationVerify",
+        "status",
+        "createdAt"
+      ]
+    },
+    "AnalysisSignal": {
+      "title": "AnalysisSignal",
+      "description": "Individual forensic or contextual signal belonging to an Analysis.",
+      "type": "object",
+      "properties": {
+        "analysisId": {
+          "type": "string",
+          "description": "ID of the parent Analysis document.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the owner matching parent Analysis.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Signal domain category.",
+          "enum": ["source", "content", "metadata", "visual", "ai"]
+        },
+        "severity": {
+          "type": "string",
+          "description": "Signal severity level.",
+          "enum": ["low", "medium", "high"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the signal.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "evidence": {
+          "type": "string",
+          "description": "Observed evidence backing the signal.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Signal confidence between 0 and 1."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "analysisId",
+        "userId",
+        "category",
+        "severity",
+        "description",
+        "evidence",
+        "confidence",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public user profile document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated private PII subcollection for the user."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Read-only admin registry."
+    },
+    "/analyses/{analysisId}": {
+      "schema": { "$ref": "#/entities/Analysis" },
+      "description": "Top-level collection of user content authenticity analyses."
+    },
+    "/analyses/{analysisId}/signals/{signalId}": {
+      "schema": { "$ref": "#/entities/AnalysisSignal" },
+      "description": "Subcollection of individual signals detected during an analysis."
+    }
+  }
+}
